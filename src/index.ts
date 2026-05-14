@@ -1,20 +1,20 @@
-import * as core from '@actions/core';
+import {debug as logDebug, error as logError, getInput, info as logInfo, setFailed, setOutput} from '@actions/core';
 import fetch from 'node-fetch';
 
 async function run(): Promise<void> {
     try {
-        const jiraWebhook: string = core.getInput('jira-webhook');
+        const jiraWebhook: string = getInput('jira-webhook');
 
-        core.setOutput('raw-commits', core.getInput('commits'));
-        core.debug(core.getInput('commits'));
+        setOutput('raw-commits', getInput('commits'));
+        logDebug(getInput('commits'));
 
-        const commits: Array<string> = JSON.parse(core.getInput('commits'));
+        const commits: Array<string> = JSON.parse(getInput('commits'));
 
-        core.setOutput('parsed-commits', commits);
-        core.debug(JSON.stringify(commits));
+        setOutput('parsed-commits', commits);
+        logDebug(JSON.stringify(commits));
 
         if (!isValidHttpUrl(jiraWebhook)) {
-            core.setFailed('The provided Jira webhook URL wasn\'t valid.');
+            setFailed('The provided Jira webhook URL wasn\'t valid.');
         }
 
         const isJiraKey = (jiraKey: string | null): jiraKey is string => jiraKey !== null
@@ -26,18 +26,18 @@ async function run(): Promise<void> {
                 .map((jiraKey: string): string => jiraKey.toUpperCase())
         )];
 
-        core.info(`Found ${issueKeys.length} issue keys in ${commits.length} commits.`)
+        logInfo(`Found ${issueKeys.length} issue keys in ${commits.length} commits.`)
 
-        core.setOutput('jira-issue-keys', issueKeys);
-        core.debug(JSON.stringify(issueKeys));
+        setOutput('jira-issue-keys', issueKeys);
+        logDebug(JSON.stringify(issueKeys));
 
         issueKeys.forEach((issue: string) => {
             sendRequestToJira(jiraWebhook, issue);
         })
     } catch (error: any) {
-        core.error(error);
+        logError(error);
 
-        if (error instanceof Error) core.setFailed(error.message);
+        if (error instanceof Error) setFailed(error.message);
     }
 }
 
@@ -62,7 +62,7 @@ function getJiraIssueKey(commit: string | null): RegExpMatchArray | null {
 }
 
 function sendRequestToJira(jiraWebhookUrl: string, jiraIssue: string) {
-    core.debug(`Sending ticket to Jira: ${jiraIssue}`);
+    logDebug(`Sending ticket to Jira: ${jiraIssue}`);
 
     fetch(jiraWebhookUrl, {
         method: 'POST',
@@ -71,7 +71,7 @@ function sendRequestToJira(jiraWebhookUrl: string, jiraIssue: string) {
             body: jiraIssue
         })
     }).catch(
-        error => core.error(error)
+        error => logError(error)
     );
 }
 
